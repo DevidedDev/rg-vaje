@@ -6,40 +6,38 @@ nato obdela plogskve/fragments/trikotnike (shader ploskev)
 
 */
 
-const colors = array(
-    vec4f(1, 0, 0, 1),
-    vec4f(0, 1, 0, 1),
-    vec4f(0, 0, 1, 1),
-);
 
-const positions = array(
-    vec3f(-0.5, -0.5, 0),
-    vec3f( 0.5, -0.5, 0),
-    vec3f( 0.0,  0.5, 0),
+
+
+const angle = radians(40);
+const rotation = mat4x4f(
+    vec4f(cos(angle), -sin(angle), 0,0),
+    vec4f(sin(angle), cos(angle), 0,0),
+    vec4f(0, 0, 1,0),
+    vec4f(0, 0, 0, 1)
 );
 
 @vertex
 fn vertex(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
-
-    output.position = vec4f(positions[input.vertexIndex], 1);
-    output.color = colors[input.vertexIndex];
-
+    
+    output.position = vec4(input.position, 1);
+    output.color = input.color;
     return output;
 }
 
 @fragment
 fn fragment(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
-
     output.color = input.color;
-
     return output;
 }
 
 
+
 struct VertexInput {
-    @builtin(vertex_index) vertexIndex: u32,
+    @location(0) position: vec3f,
+    @location(1) color: vec4f,
 }
 
 struct VertexOutput {
@@ -59,3 +57,4 @@ struct FragmentOutput {
     //... !zato je tudi tabela "platen/slik" pri mojem cevovodu
     @location(0) color: vec4f,  
 }
+
