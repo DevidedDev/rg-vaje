@@ -6,7 +6,9 @@ nato obdela plogskve/fragments/trikotnike (shader ploskev)
 
 */
 
-
+//premik
+@group(0) @binding(0) 
+var<uniform> matrix : mat4x4f;
 
 
 const angle = radians(40);
@@ -21,7 +23,7 @@ const rotation = mat4x4f(
 fn vertex(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     
-    output.position = vec4(input.position, 1);
+    output.position = matrix * vec4(input.position, 1);
     output.color = input.color;
     return output;
 }
