@@ -117,14 +117,16 @@ const pipeline = device.createRenderPipeline({
   layout: "auto",
 });
 
+
 const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
     ]
 });
+
 //naredim premik
-device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([0.5, 0.5, 0]));
+device.queue.writeBuffer(uniformBuffer, 0, new Mat4());
 
 
 
@@ -172,4 +174,4 @@ function frame() {
     requestAnimationFrame(frame);
 }
 render();
-requestAnimationFrame(frame);
+//requestAnimationFrame(frame);
