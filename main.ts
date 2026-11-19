@@ -49,17 +49,62 @@ function krog(n : number){
 
 
 }
-const k = krog(100);
-const vertices = k.vertices;
-const indices = k.indices;
+const w = 1/100;
+function ctaX(){
+
+}
+function crtaY(){
+
+}
+function mreza(x:number, y:number){
+
+  const vertices = [];
+  const indices = [];
+  let  c = 0;
+  for(let i = 1; i<y;i++){
+    let pos = (0-1)+(2/y)*(i);
+    vertices.push(
+    1, pos, 0,    1, 0, 0, 1,
+    -1, pos, 0,    1, 0, 0, 1,
+    1, pos+w, 0,    1, 0, 0, 1,
+    -1, pos+w, 0,    1, 0, 0, 1,
+    );
+    indices.push(
+      c, c+1, c+2,
+      c+2, c+1, c+3,);
+    c+=4;
+  }
+
+  for(let i = 1; i<x;i++){
+    let pos = (0-1)+(2/x)*(i);
+    vertices.push(
+    pos, 1, 0,    1, 0, 0, 1,
+    pos, -1, 0,    1, 0, 0, 1,
+    pos+w, 1, 0,    1, 0, 0, 1,
+    pos+w, -1, 0,    1, 0, 0, 1,
+    );
+    indices.push(
+      c, c+1, c+2,
+      c+2, c+1, c+3,);
+    c+=4;
+  }
+
+
+  return {vertuces: new Float32Array(vertices), indes:new Uint32Array(indices)}
+};
+
+const m = mreza(10,10);
+const vertices = m.vertuces;
+const indices = m.indes;
 
 /*
   const vertices = new Float32Array([
     // position    // color
-    -0.5, -0.5, 0,    1, 0, 0, 1,
-     0.5, -0.5, 0,    0, 1, 0, 1,
-    -0.5,  0.5, 0,    0, 0, 1, 1,
-     0.5,  0.5, 0,    1, 1, 0, 1,
+    1, 0, 0,    1, 0, 0, 1,
+    -1, 0, 0,    1, 0, 0, 1,
+    1, w, 0,    1, 0, 0, 1,
+    -1, w, 0,    1, 0, 0, 1,
+
 ]);
     const indices = new Uint32Array([
         // 1st triangle
@@ -67,7 +112,7 @@ const indices = k.indices;
         // 2nd triangle
         2, 1, 3,
     ]);
-*/
+  */
 //MEDPOMNILNIKI
 const vertexBuffer = device.createBuffer({
     size: vertices.byteLength,
