@@ -1,11 +1,11 @@
 import { Mat4 } from "gl-matrix";
+
+// 1. ADAPTER, NAPRAVA, PLATNO
 const adapter = await navigator.gpu.requestAdapter();
 if (adapter === null) {
   throw new Error("Brskalnik ne podpira WebGPUja.");
 }
 const device = await adapter.requestDevice();
-
-
 
 const canvas = document.querySelector("canvas");
 if (canvas === null) {
@@ -17,141 +17,35 @@ if (context === null) {
   throw new Error("Kontekst webgpu ne obstaja.");
 }
 
-const format = navigator.gpu.getPreferredCanvasFormat(); //format barve za izris
+const format = navigator.gpu.getPreferredCanvasFormat(); // format barve za izris
 context.configure({ device, format });
 
-//SHADER
+// 2. SHADER
 const response = await fetch("./shader.wgsl");
-const code = await response.text(); 
+const code = await response.text();
 const shaderModule = device.createShaderModule({ code });
 
-
-//OGLJISCA
-
-function krog(n : number){
-  const radius = 0.5;
-  const vertices : number[] = [];
-  vertices.push(...[0, 0, 0, 1, 0, 0, 1]); //sredisce kroga
-  for(let i = 1; i <= n; i++ ){
-    const angle = (i / n) * 2 * Math.PI;
-    const x = radius * Math.cos(angle);
-    const y = radius * Math.sin(angle);
-    vertices.push(...[x, y, 0, 1, 0, 0, 1]);
-  }
-  const indices : number[] = [];
-  for(let i = 1; i<n; i++){
-    indices.push(...[0, i, i+1]);
-  }
-  indices.push(...[0, n, 1]);
-
-  return {vertices: new Float32Array(vertices),indices: new Uint32Array(indices)};
- 
-
-
-}
-const w = 1/100;
-function ctaX(){
-
-}
-function crtaY(){
-
-}
-function mreza(x:number, y:number){
-
-  const vertices = [];
-  const indices = [];
-  let  c = 0;
-  for(let i = 1; i<y;i++){
-    let pos = (0-1)+(2/y)*(i);
-    vertices.push(
-    1, pos, 0,    1, 0, 0, 1,
-    -1, pos, 0,    1, 0, 0, 1,
-    1, pos+w, 0,    1, 0, 0, 1,
-    -1, pos+w, 0,    1, 0, 0, 1,
-    );
-    indices.push(
-      c, c+1, c+2,
-      c+2, c+1, c+3,);
-    c+=4;
-  }
-
-  for(let i = 1; i<x;i++){
-    let pos = (0-1)+(2/x)*(i);
-    vertices.push(
-    pos, 1, 0,    1, 0, 0, 1,
-    pos, -1, 0,    1, 0, 0, 1,
-    pos+w, 1, 0,    1, 0, 0, 1,
-    pos+w, -1, 0,    1, 0, 0, 1,
-    );
-    indices.push(
-      c, c+1, c+2,
-      c+2, c+1, c+3,);
-    c+=4;
-  }
-
-
-  return {vertuces: new Float32Array(vertices), indes:new Uint32Array(indices)}
-};
-
-const m = mreza(10,10);
-const vertices = m.vertuces;
-const indices = m.indes;
-
-/*
-  const vertices = new Float32Array([
-    // position    // color
-    1, 0, 0,    1, 0, 0, 1,
-    -1, 0, 0,    1, 0, 0, 1,
-    1, w, 0,    1, 0, 0, 1,
-    -1, w, 0,    1, 0, 0, 1,
-
-]);
-    const indices = new Uint32Array([
-        // 1st triangle
-        0, 1, 2,
-        // 2nd triangle
-        2, 1, 3,
-    ]);
-  */
-//MEDPOMNILNIKI
-const vertexBuffer = device.createBuffer({
-    size: vertices.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-});
-device.queue.writeBuffer(vertexBuffer, 0, vertices);
+// 3. OPIS OGLIŠČ (skupen vsem objektom, zato zunaj razreda)
+//samo pove kako naj vse stoji
 const vertexBufferLayout: GPUVertexBufferLayout = {
-    arrayStride: 28, //12+16 = 28B
-    attributes: [
-        {
-            shaderLocation: 0,
-            offset: 0,
-            format: 'float32x3',//32bx3 oz... 4Bx3
-        },
-        {
-            shaderLocation: 1,
-            offset: 12, //zacnemo na 12B
-            format: 'float32x4', //oz. 4Bx4
-        },
-    ]
+  arrayStride: 28, // 12 + 16 = 28 B na oglišče
+  attributes: [
+    {
+      shaderLocation: 0, // @location(0) position
+      offset: 0,
+      format: "float32x3", // 3 × 4 B
+    },
+    {
+      shaderLocation: 1, // @location(1) color
+      offset: 12, // barva se začne na 12. bajtu
+      format: "float32x4", // 4 × 4 B
+    },
+  ],
 };
 
-const indexBuffer = device.createBuffer({
-    size: indices.byteLength,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-});
-
-device.queue.writeBuffer(indexBuffer, 0, indices);
-
-//unifrom buffer
-const uniformBuffer = device.createBuffer({
-    size: 64,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
-
-
-//CEVOVOD(grafični)
+// 4. CEVOVOD (mora biti pred objekti, ker ga rabijo za bind group)
 const pipeline = device.createRenderPipeline({
-  vertex: { //to je dejansko moj senčilnikiy shader.wgsl
+  vertex: {
     module: shaderModule,
     buffers: [vertexBufferLayout],
   },
@@ -162,61 +56,146 @@ const pipeline = device.createRenderPipeline({
   layout: "auto",
 });
 
-
-const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-    ]
+//GLOBINSKA SLIKA
+const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-//naredim premik
-device.queue.writeBuffer(uniformBuffer, 0, new Mat4());
+// 5. RAZRED OBJEKT
+class objekt {
+  vertices: Float32Array;
+  indices: Uint32Array;
+  vertexBuffer: GPUBuffer;
+  indexBuffer: GPUBuffer;
+  uniformBuffer: GPUBuffer;
+  bindGroup: GPUBindGroup;
 
+  constructor(vertices: Float32Array, indices: Uint32Array) {
+    this.vertices = vertices;
+    this.indices = indices;
 
+    // medpomnilnik oglišč
+    this.vertexBuffer = device.createBuffer({
+      size: vertices.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(this.vertexBuffer, 0, vertices);
 
+    // medpomnilnik indeksov
+    this.indexBuffer = device.createBuffer({
+      size: indices.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(this.indexBuffer, 0, indices);
 
-function update() {
-  const time = performance.now() / 1000;
-  const radius = 0.5;
-  const frequency = 0.5;
-  const x = radius * Math.cos(frequency * time * 2 * Math.PI);
-  const y = radius * Math.sin(frequency * time * 2 * Math.PI);
+    // uniform buffer za matriko objekta
+    this.uniformBuffer = device.createBuffer({
+      size: 64,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
 
-  const translation = Mat4.fromTranslation(new Mat4(), [ x, y, 0 ]);
-  device.queue.writeBuffer(uniformBuffer, 0, translation as Float32Array);
+    this.bindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+    });
+
+    // enotska matrika = brez premika
+    device.queue.writeBuffer(this.uniformBuffer, 0, new Mat4() as Float32Array);
+  }
+
+  render(renderPass: GPURenderPassEncoder) {
+    renderPass.setVertexBuffer(0, this.vertexBuffer);
+    renderPass.setIndexBuffer(this.indexBuffer, "uint32");
+    renderPass.setBindGroup(0, this.bindGroup);
+    renderPass.drawIndexed(this.indices.length);
+  }
+
+  transform(matrix : Mat4){
+    device.queue.writeBuffer(this.uniformBuffer, 0, matrix);
+  }
 }
 
+// 6. OBJEKTI (šele zdaj, ko obstaja cevovod)
+
+
+// Kvadrat, spodaj na sredini
+const kocka= new objekt(
+  new Float32Array([
+    // position      // color          // index
+    -1, -1, -1,      0,  0,  0,  1,    //   0
+    -1, -1,  1,      0,  0,  1,  1,    //   1
+    -1,  1, -1,      0,  1,  0,  1,    //   2
+    -1,  1,  1,      0,  1,  1,  1,    //   3
+     1, -1, -1,      1,  0,  0,  1,    //   4
+     1, -1,  1,      1,  0,  1,  1,    //   5
+     1,  1, -1,      1,  1,  0,  1,    //   6
+     1,  1,  1,      1,  1,  1,  1,    //   7
+  ]),
+  new Uint32Array([
+    0, 1, 2,    2, 1, 3,
+    4, 0, 6,    6, 0, 2,
+    5, 4, 7,    7, 4, 6,
+    1, 5, 3,    3, 5, 7,
+    6, 2, 7,    7, 2, 3,
+    1, 0, 5,    5, 0, 4,
+  ]),
+);
+
+
+const objects = [kocka];
+// MAtrike
+const viewMatrix = Mat4.fromTranslation(new Mat4(), [0, 0, -5]);
+//const viewMatrix = Mat4.lookAt(new Mat4(), [0, 0, 5], [0, 0, 0], [0, 1, 0]);//alternativa:
+const projectionMatrix = Mat4.perspectiveZO(new Mat4(), 1, 1, 0.01, 1000);
+const modelMatrix = new Mat4();
+
+
+
+// 7. IZRIS
 function render() {
-  const commandEncoder = device.createCommandEncoder(); // tukaj so ukazi
-  // Tu bomo zapisovali ukaze
-    const renderPass = commandEncoder.beginRenderPass({
+  const matrix = new Mat4()
+    .multiply(projectionMatrix)
+    .multiply(viewMatrix)
+    .multiply(modelMatrix);
+  for (const obj of objects) {
+    obj.transform(matrix);
+  }
+  
+
+
+  const commandEncoder = device.createCommandEncoder();
+
+  const renderPass = commandEncoder.beginRenderPass({
     colorAttachments: [
-        {
+      {
         view: context!.getCurrentTexture().createView(),
         loadOp: "clear",
         clearValue: [0.5, 0.5, 0.5, 1],
         storeOp: "store",
-        },
+      },
     ],
-    });
-    // Tu bomo zapisovali ukaze za izris
-        renderPass.setPipeline(pipeline); //nastavim da bom lahko risal
-        renderPass.setVertexBuffer(0, vertexBuffer);
-        renderPass.setIndexBuffer(indexBuffer, 'uint32');
-        renderPass.setBindGroup(0, bindGroup);
-        renderPass.drawIndexed(indices.length);
-    renderPass.end();
+  });
 
-  const commandBuffer = commandEncoder.finish();//tukaj so ukazi vračunalnikuberljivem formatu - vrne ukazni medpomnilnik
-  device.queue.submit([commandBuffer]); //tukaj ukazičakajo na izvedbo. Device ime queue kamor se naložijo ti ukazi s pomočjo submit
+  renderPass.setPipeline(pipeline);
+  for (const obj of objects) {
+    obj.render(renderPass);
+  }
+  renderPass.end();
+
+  device.queue.submit([commandEncoder.finish()]);
+}
+
+
+function update(){
+  render();
+  const time = performance.now() / 1000;
+  modelMatrix.identity().rotateX(time * 0.6).rotateY(time * 0.7);
+  requestAnimationFrame(update); 
 
 }
 
-function frame() {
-    update();
-    render();
-    requestAnimationFrame(frame);
-}
-render();
-//requestAnimationFrame(frame);
+requestAnimationFrame(update);
+
+
