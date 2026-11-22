@@ -17,8 +17,36 @@ if (context === null) {
   throw new Error("Kontekst webgpu ne obstaja.");
 }
 
+
+
+
 const format = navigator.gpu.getPreferredCanvasFormat(); // format barve za izris
 context.configure({ device, format });
+
+//Tekstura
+const imageBitmap = await fetch('img.png')
+    .then(response => response.blob())
+    .then(blob => createImageBitmap(blob));
+
+const texture = device.createTexture({
+    size: [imageBitmap.width, imageBitmap.height],
+    format: 'rgba8unorm',
+    usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.RENDER_ATTACHMENT |
+        GPUTextureUsage.COPY_DST,
+});
+
+device.queue.copyExternalImageToTexture(
+    { source: imageBitmap },
+    { texture },
+    [imageBitmap.width, imageBitmap.height]);
+
+//VZORČEVALNIK
+const sampler = device.createSampler({
+    minFilter: 'linear',
+    magFilter: 'linear',
+});
 
 // 2. SHADER
 const response = await fetch("./shader.wgsl");
@@ -28,17 +56,17 @@ const shaderModule = device.createShaderModule({ code });
 // 3. OPIS OGLIŠČ (skupen vsem objektom, zato zunaj razreda)
 //samo pove kako naj vse stoji
 const vertexBufferLayout: GPUVertexBufferLayout = {
-  arrayStride: 28, // 12 + 16 = 28 B na oglišče
+  arrayStride: 20,
   attributes: [
     {
-      shaderLocation: 0, // @location(0) position
+      shaderLocation: 0,
       offset: 0,
-      format: "float32x3", // 3 × 4 B
+      format: "float32x3",
     },
     {
-      shaderLocation: 1, // @location(1) color
-      offset: 12, // barva se začne na 12. bajtu
-      format: "float32x4", // 4 × 4 B
+      shaderLocation: 1,
+      offset: 12,
+      format: "float32x2",
     },
   ],
 };
@@ -103,7 +131,12 @@ class objekt {
 
     this.bindGroup = device.createBindGroup({
       layout: pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: sampler }
+      ],
+      
     });
 
     // enotska matrika = brez premika
@@ -128,15 +161,15 @@ class objekt {
 // Kvadrat, spodaj na sredini
 const kocka= new objekt(
   new Float32Array([
-    // position      // color          // index
-    -1, -1, -1,      0,  0,  0,  1,    //   0
-    -1, -1,  1,      0,  0,  1,  1,    //   1
-    -1,  1, -1,      0,  1,  0,  1,    //   2
-    -1,  1,  1,      0,  1,  1,  1,    //   3
-     1, -1, -1,      1,  0,  0,  1,    //   4
-     1, -1,  1,      1,  0,  1,  1,    //   5
-     1,  1, -1,      1,  1,  0,  1,    //   6
-     1,  1,  1,      1,  1,  1,  1,    //   7
+  // positions     // texcoords
+  -1, -1, -1,      0,  0,
+  -1, -1,  1,      0,  1,
+  -1,  1, -1,      1,  0,
+  -1,  1,  1,      1,  1,
+   1, -1, -1,      0,  0,
+   1, -1,  1,      0,  1,
+   1,  1, -1,      1,  0,
+   1,  1,  1,      1,  1,
   ]),
   new Uint32Array([
     0, 1, 2,    2, 1, 3,

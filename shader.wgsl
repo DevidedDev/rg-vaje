@@ -24,14 +24,17 @@ fn vertex(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     
     output.position = matrix * vec4(input.position, 1);
-    output.color = input.color;
+    output.texcoords = input.texcoords;
+
+
     return output;
 }
 
 @fragment
 fn fragment(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
-    output.color = input.color;
+    output.color = textureSample(baseTexture, baseSampler, input.texcoords);
+
     return output;
 }
 
@@ -39,19 +42,16 @@ fn fragment(input: FragmentInput) -> FragmentOutput {
 
 struct VertexInput {
     @location(0) position: vec3f,
-    @location(1) color: vec4f,
+    @location(1) texcoords: vec2f,
 }
 
 struct VertexOutput {
     @builtin(position) position: vec4f,
-    //location poveže funkcije za elemente na indeksu 0
-    @location(0) color: vec4f, // vrednost pred interpolacijo (interpolacija sčara skupaj barve, preden sopodane shaderju)
-
+    @location(0) texcoords: vec2f,
 }
 
 struct FragmentInput {
-    //location poveže funkcije za elemente na indeksu 0
-    @location(0) color: vec4f, // vrednost po interpolaciji
+    @location(0) texcoords: vec2f,
 }
 
 struct FragmentOutput {
@@ -60,3 +60,8 @@ struct FragmentOutput {
     @location(0) color: vec4f,  
 }
 
+@group(0) @binding(1)
+var baseTexture: texture_2d<f32>;
+
+@group(0) @binding(2)
+var baseSampler: sampler;
