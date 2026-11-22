@@ -54,6 +54,11 @@ const pipeline = device.createRenderPipeline({
     targets: [{ format }],
   },
   layout: "auto",
+  depthStencil: {
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+    format: 'depth24plus',
+}
 });
 
 //GLOBINSKA SLIKA
@@ -175,8 +180,18 @@ function render() {
         clearValue: [0.5, 0.5, 0.5, 1],
         storeOp: "store",
       },
+      
     ],
+    depthStencilAttachment: {
+      view: depthTexture.createView(),
+      depthClearValue: 1,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'discard',
+  }
+  
+
   });
+
 
   renderPass.setPipeline(pipeline);
   for (const obj of objects) {
