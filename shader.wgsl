@@ -7,8 +7,13 @@ nato obdela plogskve/fragments/trikotnike (shader ploskev)
 */
 
 //premik
-@group(0) @binding(0) 
-var<uniform> matrix : mat4x4f;
+struct Uniforms {
+    matrix: mat4x4f,
+    normalMatrix: mat4x4f,
+}
+
+@group(0) @binding(0)
+var<uniform> uniforms: Uniforms;
 
 
 const angle = radians(40);
@@ -22,9 +27,10 @@ const rotation = mat4x4f(
 @vertex
 fn vertex(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
-    
-    output.position = matrix * vec4(input.position, 1);
+    output.position = uniforms.matrix * vec4f(input.position, 1);
     output.texcoords = input.texcoords;
+    output.normal = normalize(uniforms.normalMatrix * vec4f(input.normal, 0)).xyz;
+
 
 
     return output;
@@ -33,7 +39,18 @@ fn vertex(input: VertexInput) -> VertexOutput {
 @fragment
 fn fragment(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
-    output.color = textureSample(baseTexture, baseSampler, input.texcoords);
+    let materialColor = textureSample(baseTexture, baseSampler, input.texcoords);
+    let lightColor = vec3f(1.0, 1.0, 1.0);
+
+    let L = normalize(vec3f(-1.0, 1.0, 1.0));
+    let N = normalize(input.normal);
+
+
+    let lambertFactor = max(dot(L, N), 0.0);
+
+
+
+    output.color = vec4f(materialColor.rgb * lambertFactor * lightColor, materialColor.a);
 
     return output;
 }
@@ -41,17 +58,20 @@ fn fragment(input: FragmentInput) -> FragmentOutput {
 
 
 struct VertexInput {
-    @location(0) position: vec3f,
-    @location(1) texcoords: vec2f,
+  @location(0) position: vec3f,
+  @location(1) texcoords: vec2f,
+  @location(2) normal: vec3f,
 }
 
 struct VertexOutput {
     @builtin(position) position: vec4f,
-    @location(0) texcoords: vec2f,
+    @location(1) texcoords: vec2f,
+    @location(2) normal: vec3f,
 }
 
 struct FragmentInput {
-    @location(0) texcoords: vec2f,
+    @location(1) texcoords: vec2f,
+    @location(2) normal: vec3f,
 }
 
 struct FragmentOutput {

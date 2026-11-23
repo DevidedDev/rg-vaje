@@ -24,7 +24,7 @@ const format = navigator.gpu.getPreferredCanvasFormat(); // format barve za izri
 context.configure({ device, format });
 
 //Tekstura
-const imageBitmap = await fetch('img.png')
+const imageBitmap = await fetch('Diamond_Ore.webp')
     .then(response => response.blob())
     .then(blob => createImageBitmap(blob));
 
@@ -56,7 +56,7 @@ const shaderModule = device.createShaderModule({ code });
 // 3. OPIS OGLIŠČ (skupen vsem objektom, zato zunaj razreda)
 //samo pove kako naj vse stoji
 const vertexBufferLayout: GPUVertexBufferLayout = {
-  arrayStride: 20,
+  arrayStride: 32,
   attributes: [
     {
       shaderLocation: 0,
@@ -68,6 +68,12 @@ const vertexBufferLayout: GPUVertexBufferLayout = {
       offset: 12,
       format: "float32x2",
     },
+    {
+      shaderLocation: 2,
+      offset: 20,
+      format: "float32x3",
+    },
+    
   ],
 };
 
@@ -125,7 +131,7 @@ class objekt {
 
     // uniform buffer za matriko objekta
     this.uniformBuffer = device.createBuffer({
-      size: 64,
+      size: 128,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -148,6 +154,12 @@ class objekt {
     renderPass.setIndexBuffer(this.indexBuffer, "uint32");
     renderPass.setBindGroup(0, this.bindGroup);
     renderPass.drawIndexed(this.indices.length);
+
+    const normalMatrix = new Mat4();
+    Mat4.copy(normalMatrix, modelMatrix);
+    normalMatrix.invert().transpose();
+    
+    device.queue.writeBuffer(this.uniformBuffer, 64, normalMatrix);
   }
 
   transform(matrix : Mat4){
@@ -161,23 +173,67 @@ class objekt {
 // Kvadrat, spodaj na sredini
 const kocka= new objekt(
   new Float32Array([
-  // positions     // texcoords
-  -1, -1, -1,      0,  0,
-  -1, -1,  1,      0,  1,
-  -1,  1, -1,      1,  0,
-  -1,  1,  1,      1,  1,
-   1, -1, -1,      0,  0,
-   1, -1,  1,      0,  1,
-   1,  1, -1,      1,  0,
-   1,  1,  1,      1,  1,
+  // positions  // texc // normals
+  // Front
+  -1, -1,  1,    0, 0,    0,  0,  1,
+   1, -1,  1,    1, 0,    0,  0,  1,
+   1,  1,  1,    1, 1,    0,  0,  1,
+  -1,  1,  1,    0, 1,    0,  0,  1,
+
+  // Back
+   1, -1, -1,    0, 0,    0,  0, -1,
+  -1, -1, -1,    1, 0,    0,  0, -1,
+  -1,  1, -1,    1, 1,    0,  0, -1,
+   1,  1, -1,    0, 1,    0,  0, -1,
+
+  // Left
+  -1, -1, -1,    0, 0,   -1,  0,  0,
+  -1, -1,  1,    1, 0,   -1,  0,  0,
+  -1,  1,  1,    1, 1,   -1,  0,  0,
+  -1,  1, -1,    0, 1,   -1,  0,  0,
+
+  // Right
+   1, -1,  1,    0, 0,    1,  0,  0,
+   1, -1, -1,    1, 0,    1,  0,  0,
+   1,  1, -1,    1, 1,    1,  0,  0,
+   1,  1,  1,    0, 1,    1,  0,  0,
+
+  // Top
+  -1,  1,  1,    0, 0,    0,  1,  0,
+   1,  1,  1,    1, 0,    0,  1,  0,
+   1,  1, -1,    1, 1,    0,  1,  0,
+  -1,  1, -1,    0, 1,    0,  1,  0,
+
+  // Bottom
+  -1, -1, -1,    0, 0,    0, -1,  0,
+   1, -1, -1,    1, 0,    0, -1,  0,
+   1, -1,  1,    1, 1,    0, -1,  0,
+  -1, -1,  1,    0, 1,    0, -1,  0,
   ]),
   new Uint32Array([
-    0, 1, 2,    2, 1, 3,
-    4, 0, 6,    6, 0, 2,
-    5, 4, 7,    7, 4, 6,
-    1, 5, 3,    3, 5, 7,
-    6, 2, 7,    7, 2, 3,
-    1, 0, 5,    5, 0, 4,
+  // Front
+  0,  1,  2,
+  0,  2,  3,
+
+ // Back
+  4,  5,  6,
+  4,  6,  7,
+
+ // Left
+  8,  9, 10,
+  8, 10, 11,
+
+ // Right
+ 12, 13, 14,
+ 12, 14, 15,
+
+ // Top
+ 16, 17, 18,
+ 16, 18, 19,
+
+ // Bottom
+ 20, 21, 22,
+ 20, 22, 23,
   ]),
 );
 
@@ -231,6 +287,8 @@ function render() {
     obj.render(renderPass);
   }
   renderPass.end();
+
+ 
 
   device.queue.submit([commandEncoder.finish()]);
 }
