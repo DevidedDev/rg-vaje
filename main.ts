@@ -131,7 +131,7 @@ class objekt {
 
     // uniform buffer za matriko objekta
     this.uniformBuffer = device.createBuffer({
-      size: 128,
+      size: 192,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -146,6 +146,8 @@ class objekt {
     });
 
     // enotska matrika = brez premika
+    //device.queue.writeBuffer(this.uniformBuffer, 128, modelMatrix);
+
     device.queue.writeBuffer(this.uniformBuffer, 0, new Mat4() as Float32Array);
   }
 

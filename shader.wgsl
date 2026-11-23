@@ -10,7 +10,10 @@ nato obdela plogskve/fragments/trikotnike (shader ploskev)
 struct Uniforms {
     matrix: mat4x4f,
     normalMatrix: mat4x4f,
+    modelMatrix: mat4x4f,
 }
+
+
 
 @group(0) @binding(0)
 var<uniform> uniforms: Uniforms;
@@ -27,7 +30,8 @@ const rotation = mat4x4f(
 @vertex
 fn vertex(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
-    output.position = uniforms.matrix * vec4f(input.position, 1);
+    output.clipPosition = uniforms.matrix * vec4f(input.position, 1);
+    output.position = (uniforms.modelMatrix * vec4f(input.position, 1)).xyz;
     output.texcoords = input.texcoords;
     output.normal = normalize(uniforms.normalMatrix * vec4f(input.normal, 0)).xyz;
 
@@ -42,37 +46,42 @@ fn fragment(input: FragmentInput) -> FragmentOutput {
     let materialColor = textureSample(baseTexture, baseSampler, input.texcoords);
     let lightColor = vec3f(1.0, 1.0, 1.0);
 
-    let L = normalize(vec3f(-1.0, 1.0, 1.0));
-    let N = normalize(input.normal);
+   let lightPosition = vec3f(-1.0, 1.0, 1.0);
+let L = normalize(lightPosition - input.position);
+let N = normalize(input.normal);
 
-
-    let lambertFactor = max(dot(L, N), 0.0);
-
-
+let distance = length(lightPosition - input.position);
+let attenuation = 1.0 / (distance * distance);
+let lightIntensity = lightColor * attenuation;
+let lambertFactor = max(dot(L, N), 0.0) * lightIntensity;
+output.color = vec4f(materialColor.rgb * lambertFactor, materialColor.a);
 
     output.color = vec4f(materialColor.rgb * lambertFactor * lightColor, materialColor.a);
 
     return output;
 }
 
-
-
 struct VertexInput {
-  @location(0) position: vec3f,
-  @location(1) texcoords: vec2f,
-  @location(2) normal: vec3f,
+    @location(0) position: vec3f,
+    @location(1) texcoords: vec2f,
+    @location(2) normal: vec3f,
 }
 
+
 struct VertexOutput {
-    @builtin(position) position: vec4f,
+    @builtin(position) clipPosition: vec4f,
+    @location(0) position: vec3f,
     @location(1) texcoords: vec2f,
     @location(2) normal: vec3f,
 }
 
 struct FragmentInput {
+    @location(0) position: vec3f,
     @location(1) texcoords: vec2f,
     @location(2) normal: vec3f,
 }
+
+
 
 struct FragmentOutput {
     //lOkacija izhodne slike (moje platno- je samo eno, index 0 )
